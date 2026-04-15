@@ -1,4 +1,4 @@
-name: vens
+name: vens-action
 description: Prioritize vulnerabilities by real risk, not just CVSS
 author: fahedouch
 branding:
