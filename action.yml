@@ -227,7 +227,13 @@ runs:
 
         if [ "${INPUT_ATTEST}" = "true" ]; then
           att_base="${INPUT_OUTPUT_VEX%.json}"; att_base="${att_base%.cdx}"
-          echo "attestation-file=${att_base}.attestation.cdx.json" >> "${GITHUB_OUTPUT}"
+          att_path="${att_base}.attestation.cdx.json"
+          if [ -f "${att_path}" ]; then
+            echo "attestation-file=${att_path}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "attestation-file=" >> "${GITHUB_OUTPUT}"
+            echo "::warning::attest=true but no attestation file was produced (0 vulnerabilities or 0 batches)"
+          fi
         else
           echo "attestation-file=" >> "${GITHUB_OUTPUT}"
         fi
