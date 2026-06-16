@@ -24,6 +24,9 @@ inputs:
   output-vex:
     description: "Output path for the generated CycloneDX VEX file"
     default: ${{ runner.temp }}/vens-vex.cdx.json
+  attest:
+    description: "If true, also emit a CycloneDX Attestations (CDXA) sibling file next to the VEX (prompt hash, input hash, model, seed, raw LLM response)"
+    default: "false"
   sbom-serial-number:
     description: "SBOM BOM-Link serial in urn:uuid:<uuid> form. Pin one per service and reuse it across runs."
     required: true
@@ -59,6 +62,9 @@ outputs:
   vex-file:
     description: "Path to the generated CycloneDX VEX file"
     value: ${{ steps.run.outputs.vex-file }}
+  attestation-file:
+    description: "Path to the CDXA attestation sibling file (empty when attest=false)"
+    value: ${{ steps.run.outputs.attestation-file }}
   enriched-report:
     description: "Path to the enriched Trivy report (empty when enrich=false)"
     value: ${{ steps.run.outputs.enriched-report }}
@@ -154,6 +160,7 @@ runs:
         INPUT_REPORT: ${{ inputs.input-report }}
         INPUT_FORMAT: ${{ inputs.input-format }}
         INPUT_OUTPUT_VEX: ${{ inputs.output-vex }}
+        INPUT_ATTEST: ${{ inputs.attest }}
         INPUT_SBOM_SERIAL: ${{ inputs.sbom-serial-number }}
         INPUT_SBOM_VERSION: ${{ inputs.sbom-version }}
         INPUT_LLM_PROVIDER: ${{ inputs.llm-provider }}
@@ -201,6 +208,11 @@ runs:
             ;;
         esac
 
+        attest_args=()
+        if [ "${INPUT_ATTEST}" = "true" ]; then
+          attest_args+=(--attest)
+        fi
+
         vens generate \
           --config-file "${INPUT_CONFIG_FILE}" \
           --llm "${INPUT_LLM_PROVIDER}" \
@@ -208,9 +220,17 @@ runs:
           --input-format "${INPUT_FORMAT}" \
           --sbom-serial-number "${INPUT_SBOM_SERIAL}" \
           --sbom-version "${INPUT_SBOM_VERSION}" \
+          ${attest_args[@]+"${attest_args[@]}"} \
           "${INPUT_REPORT}" "${INPUT_OUTPUT_VEX}"
 
         echo "vex-file=${INPUT_OUTPUT_VEX}" >> "${GITHUB_OUTPUT}"
+
+        if [ "${INPUT_ATTEST}" = "true" ]; then
+          att_base="${INPUT_OUTPUT_VEX%.json}"; att_base="${att_base%.cdx}"
+          echo "attestation-file=${att_base}.attestation.cdx.json" >> "${GITHUB_OUTPUT}"
+        else
+          echo "attestation-file=" >> "${GITHUB_OUTPUT}"
+        fi
 
         if [ "${INPUT_ENRICH}" = "true" ]; then
           vens enrich --vex "${INPUT_OUTPUT_VEX}" --output "${INPUT_ENRICHED_OUT}" "${INPUT_REPORT}"
