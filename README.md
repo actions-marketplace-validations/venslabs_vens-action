@@ -73,27 +73,6 @@ This is the **serial number of the SBOM that your scanner report was produced fr
 | `version` | vens version installed (empty when `bin-path` is used). |
 | `count-critical` / `-high` / `-medium` / `-low` / `-info` | CVE counts per OWASP severity bucket. |
 
-## Attestation
-
-Set `attest: "true"` to also write a [CycloneDX Attestations (CDXA)](https://cyclonedx.org/capabilities/attestations/) sidecar next to the VEX. Per scored CVE it records how the score was produced: model, seed, SHA-256 hashes of the prompt, scan report and `config.yaml`, and the raw LLM response (base64, not encrypted). Use it to audit or reproduce a run later. It is evidence, not a cryptographic signature.
-
-```yaml
-- uses: venslabs/vens-action@v0.2.0
-  id: vens
-  with:
-    # ...usual inputs...
-    attest: "true"
-
-- uses: actions/upload-artifact@v4
-  with:
-    name: vens
-    path: |
-      ${{ steps.vens.outputs.vex-file }}
-      ${{ steps.vens.outputs.attestation-file }}
-```
-
-It carries the model's reasoning and raw response in clear text, so treat it as security evidence: keep it access-controlled, out of public build artifacts.
-
 ## Self-hosted and air-gapped runners
 
 Pre-install the vens binary and pass `bin-path` instead of `version`:
