@@ -4,7 +4,7 @@ GitHub Action for [vens](https://github.com/venslabs/vens) — prioritize vulner
 
 Drop it into your pipeline after a Trivy or Grype scan. It re-scores every CVE in your project's context (exposure, data sensitivity, controls) and produces a CycloneDX VEX file plus severity counts you can use to fail the build.
 
-> **v0.1.0 — first release.** Intentionally minimal.
+> **v0.2.0.** Adds opt-in CDXA attestation: set `attest: "true"` to emit an evidence sidecar next to the VEX.
 
 ## Quick start
 
@@ -14,14 +14,14 @@ Drop it into your pipeline after a Trivy or Grype scan. It re-scores every CVE i
 
 - name: Prioritize with vens
   id: vens
-  uses: venslabs/vens-action@v0.1.0
+  uses: venslabs/vens-action@v0.2.0
   with:
-    version: v0.3.2
+    version: v0.4.0
     config-file: .vens/config.yaml
     input-report: report.json
     sbom-serial-number: ${{ vars.SBOM_SERIAL }}
     llm-provider: openai
-    llm-model: gpt-4o
+    llm-model: gpt-5.4-mini
     llm-api-key: ${{ secrets.OPENAI_API_KEY }}
     fail-on-severity: critical
     enrich: "true"
@@ -42,7 +42,7 @@ This is the **serial number of the SBOM that your scanner report was produced fr
 
 | Name | Required | Default | Description |
 |---|---|---|---|
-| `version` | yes\* | — | vens release tag (e.g. `v0.3.2`). Ignored when `bin-path` is set. |
+| `version` | yes\* | — | vens release tag (e.g. `v0.4.0`). Ignored when `bin-path` is set. |
 | `bin-path` | yes\* | — | Path to a pre-installed vens binary. For air-gapped runners and custom builds. |
 | `config-file` | yes | — | Path to `config.yaml` describing project context. See [vens config reference](https://github.com/venslabs/vens#configuration). |
 | `input-report` | yes | — | Trivy or Grype JSON scan report. |
@@ -58,6 +58,7 @@ This is the **serial number of the SBOM that your scanner report was produced fr
 | `enrich` | no | `false` | Also run `vens enrich` to emit an enriched Trivy report. |
 | `output-enriched-report` | no | `$RUNNER_TEMP/vens-enriched.json` | Output path for the enriched report. |
 | `fail-on-severity` | no | — | Fail the step when a CVE is rated at or above this OWASP level: `critical` \| `high` \| `medium` \| `low` \| `info`. |
+| `attest` | no | `false` | Also emit a [CycloneDX Attestations (CDXA)](https://cyclonedx.org/capabilities/attestations/) sidecar next to the VEX, recording how each CVE was scored (model, seed, prompt/input/config hashes, raw LLM response). Evidence, not a cryptographic signature. |
 
 \* One of `version` or `bin-path` must be set.
 
@@ -66,6 +67,7 @@ This is the **serial number of the SBOM that your scanner report was produced fr
 | Name | Description |
 |---|---|
 | `vex-file` | Path to the CycloneDX VEX. |
+| `attestation-file` | Path to the CDXA attestation sidecar (empty when `attest=false`, or when no vulnerabilities were scored). |
 | `enriched-report` | Path to the enriched Trivy report (empty when `enrich=false`). |
 | `sbom-serial-number` | Echoes back the serial passed in. |
 | `version` | vens version installed (empty when `bin-path` is used). |
@@ -76,7 +78,7 @@ This is the **serial number of the SBOM that your scanner report was produced fr
 Pre-install the vens binary and pass `bin-path` instead of `version`:
 
 ```yaml
-- uses: venslabs/vens-action@v0.1.0
+- uses: venslabs/vens-action@v0.2.0
   with:
     bin-path: /opt/bin/vens
     config-file: .vens/config.yaml
